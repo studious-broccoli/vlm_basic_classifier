@@ -155,7 +155,7 @@ evaluate(model, val_loader)
 
 
 # --------------------------------------------
-# 6. (Optional) TSNE Visualization of Embeddings
+# 6. TSNE Visualization of Embeddings
 # --------------------------------------------
 from sklearn.manifold import TSNE
 
