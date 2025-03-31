@@ -8,3 +8,7 @@ to classify FashionDataset
 </figure>
 
 Using Crossentropy to map to known text
+
+Notes:
+- Missing classes may be due to class imbalance or low confidence
+- Remedies: weighted loss function, oversample minority class, data augmentation on minority class, reduce learning rate, label smoothing
