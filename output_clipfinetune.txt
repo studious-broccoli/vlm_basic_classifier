@@ -1,0 +1,33 @@
+DatasetDict({
+    train: Dataset({
+        features: ['filename', 'link', 'id', 'masterCategory', 'gender', 'subCategory', 'image'],
+        num_rows: 42700
+    })
+})
+{'filename': '15970.jpg', 'link': 'http://assets.myntassets.com/v1/images/style/properties/7a5b82d1372a7a5c6de67ae7a314fd91_images.jpg', 'id': '15970', 'masterCategory': 'Apparel', 'gender': 'Men', 'subCategory': 'Topwear', 'image': <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=384x512 at 0x76CEC199BDD0>}
+Number of subcategories: 45
+subcategories: ['Belts', 'Vouchers', 'Ties', 'Bottomwear', 'Loungewear and Nightwear', 'Skin', 'Skin Care', 'Perfumes', 'Cufflinks', 'Bags', 'Accessories', 'Umbrellas', 'Topwear', 'Water Bottle', 'Shoe Accessories', 'Hair', 'Sandal', 'Dress', 'Watches', 'Scarves', 'Shoes', 'Eyewear', 'Free Gifts', 'Eyes', 'Lips', 'Headwear', 'Wallets', 'Socks', 'Jewellery', 'Beauty Accessories', 'Mufflers', 'Flip Flops', 'Home Furnishing', 'Stoles', 'Sports Accessories', 'Gloves', 'Sports Equipment', 'Innerwear', 'Wristbands', 'Fragrance', 'Makeup', 'Nails', 'Bath and Body', 'Saree', 'Apparel Set']
+Epoch 1, Train Loss: 0.7389
+Validation Accuracy: 92.96%
+Epoch 2, Train Loss: 0.2491
+Validation Accuracy: 94.47%
+Epoch 3, Train Loss: 0.1931
+Validation Accuracy: 94.91%
+Epoch 4, Train Loss: 0.1667
+Validation Accuracy: 95.35%
+Epoch 5, Train Loss: 0.1504
+Validation Accuracy: 95.59%
+Epoch 6, Train Loss: 0.1389
+Validation Accuracy: 95.77%
+Epoch 7, Train Loss: 0.1296
+Validation Accuracy: 95.97%
+Epoch 8, Train Loss: 0.1231
+Validation Accuracy: 95.94%
+Epoch 9, Train Loss: 0.1173
+Validation Accuracy: 96.21%
+Epoch 10, Train Loss: 0.1123
+Validation Accuracy: 96.14%
+Validation Accuracy: 96.14%
+saving Confusion Matrix
+Validation Accuracy: 96.14%
+saving Confusion Matrix
