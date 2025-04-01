@@ -23,7 +23,6 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # Training Variables
 BATCH_SIZE = 32
 NUM_EPOCHS = 10
-LOSS_TEMP = 0.05
 LEARNING_RATE = 1e-3
 # Model Variables
 EMBED_DIM = 128
@@ -53,6 +52,7 @@ dataset = ds['train']
 subcategories = list(set(example['subCategory'] for example in dataset))
 print("Number of subcategories:", len(subcategories))
 print("subcategories:", subcategories)
+
 
 # --------------------------------------------
 # Split Datasets
