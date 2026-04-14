@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -44,22 +46,23 @@ class VisionLanguageModel(nn.Module):
 
 class ContrastiveLoss(nn.Module):
     """
-    A simple contrastive loss (InfoNCE style) that uses a temperature parameter.
-    It computes the cosine similarities between image and text embeddings,
-    then applies cross-entropy loss.
+    InfoNCE-style contrastive loss with a learnable temperature parameter.
+
+    Temperature is stored as log(1/τ) and exponentiated at forward time,
+    matching the formulation in the original CLIP paper. It is clamped to
+    [0.01, 100] to prevent training instability.
     """
-    def __init__(self, temperature=0.05):
+    def __init__(self):
         super(ContrastiveLoss, self).__init__()
-        self.temperature = temperature
+        # Initialise at τ=0.07, the value used in CLIP's pretraining
+        self.log_temp = nn.Parameter(torch.tensor(math.log(1.0 / 0.07)))
         self.criterion = nn.CrossEntropyLoss()
 
     def forward(self, image_embeds, text_embeds):
-        # Normalize embeddings
         image_embeds = nn.functional.normalize(image_embeds, dim=1)
         text_embeds = nn.functional.normalize(text_embeds, dim=1)
-        # Compute similarity matrix (batch_size x batch_size)
-        logits = image_embeds @ text_embeds.t() / self.temperature
-        # Ground-truth: matching pairs lie on the diagonal
+        temp = self.log_temp.exp().clamp(min=0.01, max=100.0)
+        logits = image_embeds @ text_embeds.t() / temp
         labels = torch.arange(image_embeds.size(0)).to(image_embeds.device)
         loss_i = self.criterion(logits, labels)
         loss_t = self.criterion(logits.t(), labels)
@@ -67,32 +70,39 @@ class ContrastiveLoss(nn.Module):
 
 
 def evaluate(model, dataloader, device):
+    """Evaluate classification accuracy using per-class embedding prototypes.
+
+    For each class, compute the mean (prototype) of all normalised image
+    embeddings belonging to that class, then assign each image to its nearest
+    prototype by cosine similarity.
+    """
     model.eval()
     all_image_embeds = []
-    all_text_embeds = []
     all_labels = []
 
     with torch.no_grad():
         for images, labels in tqdm(dataloader, desc="Evaluating"):
             images = images.to(device)
             labels = labels.to(device)
-            image_embeds, text_embeds = model(images, labels)
-            all_image_embeds.append(image_embeds)
-            all_text_embeds.append(text_embeds)
+            image_embeds, _ = model(images, labels)
+            all_image_embeds.append(nn.functional.normalize(image_embeds, dim=1))
             all_labels.append(labels)
 
-    all_image_embeds = torch.cat(all_image_embeds)
-    all_text_embeds = torch.cat(all_text_embeds)
-    all_labels = torch.cat(all_labels)
+    all_image_embeds = torch.cat(all_image_embeds)  # (N, embed_dim)
+    all_labels = torch.cat(all_labels)              # (N,)
 
-    # Compute cosine similarity matrix between all image and text embeddings
-    sim_matrix = all_image_embeds @ all_text_embeds.t()
-    # For each image, predict the text with the highest similarity
-    preds = sim_matrix.argmax(dim=1)
-    # Compare the predicted indices with the ground truth indices
-    correct = (all_labels == all_labels[preds]).sum().item()
-    accuracy = correct / len(all_labels)
-    print(f"Retrieval Accuracy: {accuracy*100:.2f}%")
+    # Build one prototype per class: mean of normalised embeddings, renormalised
+    num_classes = int(all_labels.max().item()) + 1
+    prototypes = torch.stack([
+        nn.functional.normalize(all_image_embeds[all_labels == c].mean(dim=0), dim=0)
+        for c in range(num_classes)
+    ])  # (num_classes, embed_dim)
+
+    # Nearest-prototype classification
+    sim = all_image_embeds @ prototypes.t()  # (N, num_classes)
+    preds = sim.argmax(dim=1)
+    accuracy = (preds == all_labels).float().mean().item()
+    print(f"Classification Accuracy: {accuracy * 100:.2f}%")
 
 
 def plot_tsne(embeds, labels, title, filename):
@@ -128,8 +138,9 @@ if __name__ == "__main__":
     # Model, Loss, Optimizer
     # --------------------------------------------
     model = VisionLanguageModel(num_classes=10, embed_dim=128).to(device)
-    criterion = ContrastiveLoss(temperature=0.05)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    criterion = ContrastiveLoss()
+    # Include criterion parameters so log_temp is updated alongside the model
+    optimizer = optim.Adam(list(model.parameters()) + list(criterion.parameters()), lr=1e-3)
     NUM_EPOCHS = 10
 
     # --------------------------------------------
