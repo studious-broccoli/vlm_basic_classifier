@@ -1,4 +1,3 @@
-import pdb
 from tqdm import tqdm
 from datasets import load_dataset
 
@@ -14,9 +13,6 @@ from transformers import CLIPProcessor, CLIPModel
 
 from plotter import evaluate
 
-# Add Cuda if available
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
 # --------------------------------------------
 # Globals
 # --------------------------------------------
@@ -26,40 +22,6 @@ NUM_EPOCHS = 10
 LEARNING_RATE = 1e-3
 # Model Variables
 EMBED_DIM = 128
-
-
-# --------------------------------------------
-# Pretrained CLIP
-# --------------------------------------------
-clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
-processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-clip_model.to(device)
-
-
-# --------------------------------------------
-# Datasets: Fashion
-# --------------------------------------------
-ds = load_dataset('ceyda/fashion-products-small')
-print(ds)
-entry = ds['train'][0]
-print(entry)
-
-
-# --------------------------------------------
-# SubCategories
-# --------------------------------------------
-dataset = ds['train']
-subcategories = list(set(example['subCategory'] for example in dataset))
-print("Number of subcategories:", len(subcategories))
-print("subcategories:", subcategories)
-
-
-# --------------------------------------------
-# Split Datasets
-# --------------------------------------------
-train_size = int(0.8 * len(dataset))
-val_size = len(dataset) - train_size
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
 
 # --------------------------------------------
@@ -86,14 +48,6 @@ class FashionDataset(Dataset):
 
 
 # --------------------------------------------
-# DataLoaders
-# --------------------------------------------
-# Create DataLoader for training and validation sets
-train_loader = DataLoader(FashionDataset(train_dataset), batch_size=32, shuffle=True)
-val_loader = DataLoader(FashionDataset(val_dataset), batch_size=32, shuffle=False)
-
-
-# --------------------------------------------
 # CLIP Fine-tune Model
 # --------------------------------------------
 class CLIPFineTuner(nn.Module):
@@ -109,61 +63,97 @@ class CLIPFineTuner(nn.Module):
         return self.classifier(pooled_output)
 
 
-# --------------------------------------------
-# Define Finetune Model
-# --------------------------------------------
-num_classes = len(subcategories)
-model_ft = CLIPFineTuner(clip_model, num_classes).to(device)
+if __name__ == "__main__":
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+    # --------------------------------------------
+    # Pretrained CLIP
+    # --------------------------------------------
+    clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+    processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+    clip_model.to(device)
 
-# --------------------------------------------
-# Loss and Optimization
-# --------------------------------------------
-optimizer = optim.Adam(model_ft.classifier.parameters(), lr=1e-4)
-criterion = nn.CrossEntropyLoss()
+    # --------------------------------------------
+    # Datasets: Fashion
+    # --------------------------------------------
+    ds = load_dataset('ceyda/fashion-products-small')
+    print(ds)
+    entry = ds['train'][0]
+    print(entry)
 
+    # --------------------------------------------
+    # SubCategories
+    # --------------------------------------------
+    dataset = ds['train']
+    subcategories = list(set(example['subCategory'] for example in dataset))
+    print("Number of subcategories:", len(subcategories))
+    print("subcategories:", subcategories)
 
-# --------------------------------------------
-# Training
-# --------------------------------------------
-for epoch in range(NUM_EPOCHS):
-    model_ft.train()
-    running_loss = 0.0
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS}, Loss: 0.0000")
+    # --------------------------------------------
+    # Split Datasets
+    # --------------------------------------------
+    train_size = int(0.8 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-    for images, labels in pbar:
-        images, labels = images.to(device), labels.to(device)
-        optimizer.zero_grad()
-        outputs = model_ft(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+    # --------------------------------------------
+    # DataLoaders
+    # --------------------------------------------
+    train_loader = DataLoader(FashionDataset(train_dataset), batch_size=BATCH_SIZE, shuffle=True)
+    val_loader = DataLoader(FashionDataset(val_dataset), batch_size=BATCH_SIZE, shuffle=False)
 
-        running_loss += loss.item()
-        pbar.set_description(f"Epoch {epoch+1}/{NUM_EPOCHS}, Loss: {running_loss / len(train_loader):.4f}")
+    # --------------------------------------------
+    # Define Finetune Model
+    # --------------------------------------------
+    num_classes = len(subcategories)
+    model_ft = CLIPFineTuner(clip_model, num_classes).to(device)
 
-    print(f"Epoch {epoch+1}, Train Loss: {running_loss / len(train_loader):.4f}")
+    # --------------------------------------------
+    # Loss and Optimization
+    # --------------------------------------------
+    optimizer = optim.Adam(model_ft.classifier.parameters(), lr=1e-4)
+    criterion = nn.CrossEntropyLoss()
 
-    # Validation
-    model_ft.eval()
-    correct, total = 0, 0
-    with torch.no_grad():
-        for images, labels in val_loader:
+    # --------------------------------------------
+    # Training
+    # --------------------------------------------
+    for epoch in range(NUM_EPOCHS):
+        model_ft.train()
+        running_loss = 0.0
+        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS}, Loss: 0.0000")
+
+        for images, labels in pbar:
             images, labels = images.to(device), labels.to(device)
+            optimizer.zero_grad()
             outputs = model_ft(images)
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
-    acc = 100 * correct / total
-    print(f"Validation Accuracy: {acc:.2f}%")
+            running_loss += loss.item()
+            pbar.set_description(f"Epoch {epoch+1}/{NUM_EPOCHS}, Loss: {running_loss / len(train_loader):.4f}")
 
-# Save model
-torch.save(model_ft.state_dict(), 'clip_finetuned.pth')
+        print(f"Epoch {epoch+1}, Train Loss: {running_loss / len(train_loader):.4f}")
 
+        # Validation
+        model_ft.eval()
+        correct, total = 0, 0
+        with torch.no_grad():
+            for images, labels in val_loader:
+                images, labels = images.to(device), labels.to(device)
+                outputs = model_ft(images)
+                _, predicted = torch.max(outputs, 1)
+                total += labels.size(0)
+                correct += (predicted == labels).sum().item()
 
-# --------------------------------------------
-# Inference
-# --------------------------------------------
-evaluate(model_ft, val_loader, subcategories, device, save_name="cm_clipfinetune_val.png")
-evaluate(model_ft, val_loader, subcategories, device, save_name="cm_clipfinetune_train.png")
+        acc = 100 * correct / total
+        print(f"Validation Accuracy: {acc:.2f}%")
+
+    # Save model
+    torch.save(model_ft.state_dict(), 'clip_finetuned.pth')
+
+    # --------------------------------------------
+    # Inference
+    # --------------------------------------------
+    evaluate(model_ft, val_loader, subcategories, device, save_name="cm_clipfinetune_val.png")
+    evaluate(model_ft, train_loader, subcategories, device, save_name="cm_clipfinetune_train.png")

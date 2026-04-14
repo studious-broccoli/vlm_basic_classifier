@@ -1,4 +1,3 @@
-import pdb
 import torch
 import numpy as np
 import seaborn as sns
@@ -48,7 +47,7 @@ def basic_cm_snsp(y_true, y_pred, title, filename, class_names=None):
     # compute recall (sensitivity) for each class
     # R = TP / (TP + FN)
     denom = cf_matrix.sum(axis=1)[:, None]
-    recall = cf_matrix / denom if denom.any() > 0. else 1.
+    recall = np.where(denom > 0, cf_matrix / np.where(denom > 0, denom, 1), 0.0)
 
     # only include precision and recall labels along matrix diagnoal
     diag_indx = [v * (num_classes + 1) for v in range(0, num_classes)]
@@ -233,16 +232,3 @@ def evaluate(model_ft, data_loader, subcategories, device, save_name="cm_clipfin
     perf_report(ytrue_text, ypred_text, save_name.replace("cm_", "bar_"))
 
 
-# --------------------------------------------
-#
-# --------------------------------------------
-
-
-# --------------------------------------------
-#
-# --------------------------------------------
-
-
-# --------------------------------------------
-#
-# --------------------------------------------
