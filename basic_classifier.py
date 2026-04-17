@@ -1,16 +1,16 @@
+"""Basic Classifier"""
 import math
 
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from sklearn.manifold import TSNE
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
-
 
 # --------------------------------------------
 # Define a Simple Vision-Language Model
