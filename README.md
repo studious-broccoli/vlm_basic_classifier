@@ -1,17 +1,19 @@
 # vlm_basic_classifier
 
-Add classifier end to CLIP pre-trained model to classify FashionDataset.
+Two scripts exploring vision-language classification:
+
+- **`basic_classifier.py`** — trains a small CNN + text-embedding VLM from scratch on CIFAR-10 using InfoNCE contrastive loss with a learnable temperature parameter.
+- **`clip_finetune.py`** — fine-tunes CLIP's `visual_projection` layer with a linear classifier head on the Fashion Products dataset, with train-time augmentation and WiSE-FT weight interpolation after training.
 
 <figure>
-    <img src="bar_clipfinetune_val.png" alt="Classification Performance">
-    <figcaption>Figure 1: Classification Performance.</figcaption>
+    <img src="figures/bar_clipfinetune_val.png" alt="Classification Performance">
+    <figcaption>Figure 1: Per-class precision / recall / F1 on the validation set.</figcaption>
 </figure>
 
-Using CrossEntropy to map to known text.
-
-Notes:
-- Missing classes may be due to class imbalance or low confidence
-- Remedies: weighted loss function, oversample minority class, data augmentation on minority class, reduce learning rate, label smoothing
+<figure>
+    <img src="figures/cm_clipfinetune_val.png" alt="Confusion Matrix">
+    <figcaption>Figure 2: Confusion matrix with per-class sensitivity and specificity.</figcaption>
+</figure>
 
 ---
 
@@ -60,7 +62,8 @@ uv run python clip_finetune.py
 
 | File | Description |
 |------|-------------|
-| [basic_classifier.py](basic_classifier.py) | Custom CNN + text embedding VLM trained with InfoNCE loss on CIFAR-10 |
-| [clip_finetune.py](clip_finetune.py) | Fine-tunes a frozen CLIP vision encoder with a linear classifier on FashionDataset |
-| [plotter.py](plotter.py) | Shared utilities: confusion matrix, t-SNE, classification report bar chart |
+| [basic_classifier.py](basic_classifier.py) | Custom CNN + text-embedding VLM with learnable-temperature InfoNCE loss on CIFAR-10 |
+| [clip_finetune.py](clip_finetune.py) | CLIP fine-tuning: trains `visual_projection` + linear head on FashionDataset; applies WiSE-FT after training |
+| [plotter.py](plotter.py) | Shared utilities: confusion matrix with sensitivity/specificity, t-SNE, classification report bar chart |
 | [pyproject.toml](pyproject.toml) | Project dependencies and ruff configuration |
+| [figures/](figures/) | Output plots: confusion matrices, bar charts, t-SNE |
